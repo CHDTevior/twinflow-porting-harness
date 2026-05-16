@@ -6,6 +6,7 @@
 
 ## 0. 最容易漏掉的 12 个硬规则
 
+- [ ] 启动前必须有完整 `INPUT_CONTRACT.json`；缺数据路径、输出路径、checkpoint、conda env、eval sample、Slurm 信息时，先问用户。
 - [ ] 蒸馏是在预训练 checkpoint 上 full-parameter 继续训练，不是 LoRA，除非明确切 LoRA 路线。
 - [ ] 模型 forward 必须同时支持 `t` 和 `tt`。
 - [ ] 新增 `tt_embedder` 后，warm-start 只允许缺 `tt_embedder.*`，并从 `t_embedder` 初始化。
@@ -18,6 +19,8 @@
 - [ ] GT latent 保存前必须反归一化到 VAE latent 空间。
 - [ ] 渲染验收必须 front-view，不能有黑色三角描边伪影。
 - [ ] 长训前必须通过 synthetic、real-data、DDP、resume、eval/decode smoke。
+- [ ] eval 输出目录必须新建或显式 override；manifest 必须记录 sample identity/hash，避免旧文件或 silent retry 混入。
+- [ ] 阶段成果必须 clean-context review，尤其是 TwinFlow 与原项目的接口边界。
 
 ## 1. 模型结构类
 
@@ -319,12 +322,15 @@ base target -> enhanced target -> RCGM target -> loss
 风险：
 
 - MFS 失败后随机换样本，长训能跑但数据分布变。
+- 小样本 eval 看似完整，实际 sample index 被替换，contact sheet 中出现重复样本。
 
 检查：
 
 - [ ] real-data preflight。
 - [ ] 记录失败 UUID/path。
 - [ ] 监控 data elapsed。
+- [ ] strict eval 禁用随机替换，或在 manifest 记录每个样本的 deterministic hash。
+- [ ] 如果 dataset fallback 不可禁用，报告必须标记该 eval 不是严格样本对齐证据。
 
 ## 8. 评估 / 渲染 / 导出类
 
@@ -362,6 +368,20 @@ base target -> enhanced target -> RCGM target -> loss
 - [ ] GT、原模型、蒸馏模型使用同一 sample。
 - [ ] 原模型和蒸馏模型使用同一 init noise。
 - [ ] seed 写入 manifest。
+- [ ] sample index/UUID/hash 写入 manifest。
+- [ ] 如果 old/distilled 顺序加载导致 condition 重新编码，报告里写明该 caveat。
+
+### 8.5 old checkpoint probe 被当成官方 baseline
+
+风险：
+
+- 为了统一 sampler，把旧权重放进 TwinFlow-compatible wrapper 跑 `few/any/mul`，结果被误写成官方 old baseline。
+
+检查：
+
+- [ ] 列名区分 `old_standard`、`old_mul25`、`old_few1_probe`、`distilled_few1`。
+- [ ] 旧 checkpoint 缺 `tt_embedder.*` 时，从 `t_embedder.*` copy 初始化。
+- [ ] 其他 missing/unexpected key 仍然报错。
 
 ## 9. checkpoint / resume / logging 类
 
@@ -393,6 +413,18 @@ base target -> enhanced target -> RCGM target -> loss
 - [ ] logger 支持 Torch scalar/tensor。
 - [ ] TensorBoard/W&B 只写 finite scalar。
 
+### 9.4 输出目录混用
+
+风险：
+
+- 上一次 eval 的 NPZ/PLY/PNG/GLB 混入新 contact sheet 或 manifest。
+
+检查：
+
+- [ ] eval 脚本默认拒绝非空 output dir。
+- [ ] 若允许 override，manifest 必须记录 override 和启动时间。
+- [ ] 每个 result 记录 checkpoint path、mode、NFE、seed、sample hash。
+
 ## 10. Slurm / 环境类
 
 ### 10.1 `sbatch --wrap` 用了 `/bin/sh`
@@ -415,6 +447,7 @@ base target -> enhanced target -> RCGM target -> loss
 检查：
 
 - [ ] conda env 绝对路径。
+- [ ] conda env 是私有复制环境，不和用户共享可变环境，除非用户明确同意。
 - [ ] DINO/CLIP/其他 encoder checkpoint 绝对路径。
 - [ ] TORCH_HOME 等 cache 路径固定。
 

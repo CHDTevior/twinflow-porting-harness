@@ -10,6 +10,10 @@
 
 `<official_repo_or_local_clone>`
 
+输入合同：
+
+`<INPUT_CONTRACT.json>`
+
 ## 1. 当前状态
 
 - [ ] 未开始
@@ -40,6 +44,10 @@ Slurm log：
 
 `<slurm_log>`
 
+Slurm queue/partition：
+
+`<partition_or_template>`
+
 checkpoint：
 
 `<ckpt_dir>`
@@ -69,6 +77,10 @@ checkpoint：
 | EMA | |
 | t_rescale | |
 | inference cfg | `0` |
+| dataset root | |
+| train metadata | |
+| eval metadata | |
+| eval sample spec | |
 
 ## 4. 已完成
 
@@ -80,6 +92,8 @@ checkpoint：
 - [ ] eval scripts
 - [ ] decode/export scripts
 - [ ] cond 第一列可视化
+- [ ] strict eval sample hash / identity 记录
+- [ ] clean-context review 完成
 
 ## 5. smoke 结果
 
@@ -91,6 +105,7 @@ checkpoint：
 - [ ] DDP 1-step
 - [ ] resume 1-step
 - [ ] eval/decode
+- [ ] strict eval 不发生 silent sample substitution
 
 ## 6. 当前训练状态
 
@@ -119,7 +134,7 @@ contact sheet：
 列顺序：
 
 ```text
-cond | GT latent | original | distilled few 1 | distilled few 4 | distilled few 8
+cond | GT latent | original/pretrained | old probes if any | distilled few/any/mul
 ```
 
 3D exports：
@@ -136,6 +151,18 @@ cond | GT latent | original | distilled few 1 | distilled few 4 | distilled few 
 - [ ] 文字/铭牌失败
 - [ ] NFE 非单调
 - [ ] cond 不一致
+- [ ] GT denorm/decode 异常
+- [ ] data retry/sample substitution
+
+manifest：
+
+`<manifest.json>`
+
+sample hashes：
+
+```text
+<sample_id> <hash>
+```
 
 ## 8. 关键决策
 
@@ -149,7 +176,16 @@ cond | GT latent | original | distilled few 1 | distilled few 4 | distilled few 
 | --- | --- | --- | --- | --- |
 | | | | | |
 
-## 10. 下一个 session 要做什么
+## 10. Review / Audit
+
+| 阶段 | reviewer | trace path | verdict | action |
+| --- | --- | --- | --- | --- |
+| code call-chain | | | | |
+| smoke gate | | | | |
+| checkpoint gate | | | | |
+| protocol eval | | | | |
+
+## 11. 下一个 session 要做什么
 
 1.
 2.

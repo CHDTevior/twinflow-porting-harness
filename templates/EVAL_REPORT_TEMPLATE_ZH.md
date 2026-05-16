@@ -11,12 +11,14 @@ checkpoint：
 | 项 | 值 |
 | --- | --- |
 | sample indices | |
+| sample hashes | |
 | seed | |
 | original model NFE | |
-| distilled few NFE | `1,4,8` |
-| any/mul | |
+| old probe NFE/modes | |
+| distilled few/any/mul NFE | |
 | cfg | `0` |
 | render view | front-view |
+| strict data retry | disabled / hash-checked / not strict |
 
 ## 2. 产物路径
 
@@ -44,12 +46,16 @@ manifest：
 
 `<manifest>`
 
+decode/render status：
+
+`<decode_summary>`
+
 ## 3. 标准拼图
 
 必须包含：
 
 ```text
-cond | GT latent | original/pretrained | distilled few 1 | distilled few 4 | distilled few 8
+cond | denormalized GT latent | original/pretrained | old probes if any | distilled few/any/mul
 ```
 
 插图：
@@ -100,6 +106,18 @@ cond | GT latent | original/pretrained | distilled few 1 | distilled few 4 | dis
 
 结论：
 
+### 4.8 数据/样本严格性
+
+图或 manifest 证据：
+
+结论：
+
+### 4.9 GT denorm/decode 正确性
+
+图或 manifest 证据：
+
+结论：
+
 ## 5. 结论
 
 - [ ] 管线正确
@@ -107,6 +125,7 @@ cond | GT latent | original/pretrained | distilled few 1 | distilled few 4 | dis
 - [ ] 需要继续训练
 - [ ] 需要改超参
 - [ ] 需要排查数据/渲染
+- [ ] 当前只是 visual smoke，不支持质量/论文 claim
 
 下一步：
 
