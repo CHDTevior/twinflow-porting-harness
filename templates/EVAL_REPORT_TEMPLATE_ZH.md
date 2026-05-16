@@ -17,30 +17,15 @@ checkpoint：
 | old probe NFE/modes | |
 | distilled few/any/mul NFE | |
 | cfg | `0` |
-| render view | front-view |
+| eval artifact spec | |
+| render/export protocol | |
 | strict data retry | disabled / hash-checked / not strict |
 
 ## 2. 产物路径
 
-NPZ：
+project-native artifacts：
 
-`<npz_dir>`
-
-PLY：
-
-`<ply_dir>`
-
-GLB：
-
-`<glb_dir>`
-
-PNG：
-
-`<png_dir>`
-
-contact sheet：
-
-`<contact_sheet>`
+`<artifact_paths>`
 
 manifest：
 
@@ -55,7 +40,7 @@ decode/render status：
 必须包含：
 
 ```text
-cond | denormalized GT latent | original/pretrained | old probes if any | distilled few/any/mul
+condition input | GT/target if available | original/pretrained | old probes if any | distilled few/any/mul
 ```
 
 插图：
@@ -112,7 +97,7 @@ cond | denormalized GT latent | original/pretrained | old probes if any | distil
 
 结论：
 
-### 4.9 GT denorm/decode 正确性
+### 4.9 GT/target decode/export 正确性
 
 图或 manifest 证据：
 

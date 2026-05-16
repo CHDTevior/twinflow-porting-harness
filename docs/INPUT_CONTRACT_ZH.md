@@ -43,6 +43,7 @@ python -m twinflow_porting_harness init \
   --cluster slurm \
   --gpu-count 8 \
   --eval-sample-spec "fixed indices 0 1 2 4 5, seed 42" \
+  --eval-artifact-spec "condition input + GT/target if available + baseline/distilled comparison + manifest" \
   --slurm-log-dir /abs/project/slurm_logs \
   --slurm-partition gpu
 ```
@@ -99,6 +100,7 @@ python -m twinflow_porting_harness init --ask
 | `cluster` | local/slurm/ddp/fsdp/other | 运行环境 |
 | `gpu_count` | positive integer | 计划 GPU 数量 |
 | `eval_sample_spec` | text | 固定 eval 样本、seed、采样规则 |
+| `eval_artifact_spec` | text | 项目原生评估产物、展示列、manifest 要求 |
 | `slurm_log_dir` | existing absolute directory, or create with `--create-output-root` | Slurm 日志目录，`cluster=slurm` 时必填 |
 | `slurm_partition` | text | Slurm partition；和 `sbatch_template` 二选一 |
 | `sbatch_template` | existing absolute file | sbatch 模板；和 `slurm_partition` 二选一 |

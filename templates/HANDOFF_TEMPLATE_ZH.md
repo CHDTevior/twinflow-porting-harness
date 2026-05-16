@@ -81,17 +81,18 @@ checkpoint：
 | train metadata | |
 | eval metadata | |
 | eval sample spec | |
+| eval artifact spec | |
 
 ## 4. 已完成
 
-- [ ] model forward 支持 `tt`
-- [ ] `tt_embedder` warm-start
+- [ ] model forward 支持 TwinFlow two-time interface
+- [ ] 新增 TwinFlow 参数 warm-start 策略已审查
 - [ ] TwinFlow trainer
 - [ ] UnifiedSampler
 - [ ] EMA save/resume
 - [ ] eval scripts
 - [ ] decode/export scripts
-- [ ] cond 第一列可视化
+- [ ] eval_artifact_spec 指定的对比产物已生成
 - [ ] strict eval sample hash / identity 记录
 - [ ] clean-context review 完成
 
@@ -127,21 +128,19 @@ OOM/NaN/NCCL：
 
 ## 7. 验收结果
 
-contact sheet：
+comparison artifact：
 
-`<comparison_all.png>`
+`<comparison_artifact>`
 
-列顺序：
+布局/列顺序：
 
 ```text
-cond | GT latent | original/pretrained | old probes if any | distilled few/any/mul
+condition input | GT/target if available | original/pretrained | old probes if any | distilled few/any/mul
 ```
 
-3D exports：
+project-native exports：
 
-`<ply_dir>`
-
-`<glb_dir>`
+`<artifact_paths>`
 
 主要问题：
 
@@ -151,7 +150,7 @@ cond | GT latent | original/pretrained | old probes if any | distilled few/any/m
 - [ ] 文字/铭牌失败
 - [ ] NFE 非单调
 - [ ] cond 不一致
-- [ ] GT denorm/decode 异常
+- [ ] GT/target decode/export 异常
 - [ ] data retry/sample substitution
 
 manifest：

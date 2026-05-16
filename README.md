@@ -10,7 +10,7 @@
 - EMA、checkpoint、resume 不完整。
 - 蒸馏后推理误开 CFG。
 - eval 没有展示 `cond`。
-- GT latent 或渲染管线错误导致误判模型质量。
+- GT/target 或导出管线错误导致误判模型质量。
 - 数据路径、输出路径、checkpoint、Slurm log 等关键输入没有被显式指定，agent 直接开始改代码。
 - 数据读取失败被 dataset retry 静默替换，导致评估样本看似完整但实际重复。
 
@@ -51,6 +51,7 @@ python -m twinflow_porting_harness init \
   --cluster slurm \
   --gpu-count 8 \
   --eval-sample-spec "fixed indices 0 1 2 4 5, seed 42" \
+  --eval-artifact-spec "condition input + GT/target if available + baseline/distilled comparison + manifest" \
   --slurm-log-dir /abs/project/slurm_logs \
   --slurm-partition gpu
 ```
@@ -94,16 +95,16 @@ python -m unittest discover -s tests -v
   -> resume smoke
   -> eval/decode smoke
   -> 长训
-  -> cond + GT + 原模型 + distilled few 1/4/8 验收
+  -> 按 eval_artifact_spec 做协议验收
 ```
 
 ## 强制验收规则
 
 1. 没有完整 `INPUT_CONTRACT.json`，不得开始改代码、训练或评估。
 2. 蒸馏后推理默认 `cfg=0`。
-3. 标准 contact sheet 第一列必须是 `cond` 条件图。
-4. GT 必须从正确 denormalized latent 解码，和模型输出走同一 decode/render 路径。
-5. 每个样本至少输出 NPZ、PLY、GLB、front-view PNG、manifest。
+3. 标准对比产物必须展示条件输入或等价的 conditioning 证据。
+4. GT/target 如果存在，必须和模型输出走同一 decode/render/export 路径。
+5. 每个样本必须输出 `eval_artifact_spec` 指定的项目原生产物和 manifest。
 6. manifest 必须记录 sample id/seed/mode/path，推荐记录样本 hash，避免 silent retry 混入。
 7. 每个质量问题必须配对应图片或 crop。
 8. 长训前必须完成 smoke，不允许直接上 Slurm 长训。
@@ -126,13 +127,13 @@ project/
 
 ## 适配经验来源
 
-这套 harness 来自一次 TRELLIS stage-two 512 PRO full-parameter TwinFlow 迁移，包括：
+这套 harness 来自一次 TRELLIS stage-two TwinFlow 迁移，但代码门禁不绑定 TRELLIS；其中可迁移的经验包括：
 
-- sparse latent / dense condition 混用。
+- 项目内部 tensor/container 表示和条件输入表示不一致。
 - DDP + fp16 master + EMA teacher。
 - `mul/any` baseline。
 - `e2e/mul/any/adv + dist_match` distribution distillation。
-- 3D 输出 NPZ/PLY/GLB/PNG/contact sheet 验收。
-- step-2000 早期 checkpoint 协议评估暴露的 silent retry、GT denorm、旧 checkpoint `tt_embedder` fallback、fresh output dir、sample hash 记录等问题。
+- 项目原生产物、对比图/contact sheet、manifest 验收。
+- step-2000 早期 checkpoint 协议评估暴露的 silent retry、GT/target 处理、旧 checkpoint 新增参数 warm-start、fresh output dir、sample hash 记录等问题。
 
 不要把这里的超参当成所有项目的默认最优；它们是一个可靠起点。迁移时先保持变量少，再逐项做 ablation。

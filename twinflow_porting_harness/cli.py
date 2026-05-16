@@ -112,6 +112,12 @@ FIELD_SPECS = [
         "text",
     ),
     FieldSpec(
+        "eval_artifact_spec",
+        "评估产物和展示协议说明",
+        "Project-native eval artifacts and comparison layout, e.g. images/contact sheet/manifest or 3D exports.",
+        "text",
+    ),
+    FieldSpec(
         "slurm_log_dir",
         "Slurm 日志目录的绝对路径",
         "Absolute path for sbatch stdout/stderr logs; required when cluster=slurm.",
@@ -529,10 +535,10 @@ python -m twinflow_porting_harness validate INPUT_CONTRACT.json
 2. Read the original project call chain bottom-up before editing: model forward, sampler, trainer, dataset/collate, condition encoder, checkpoint/resume, eval/decode/render/export.
 3. Compare against `official_twinflow_ref`; document any semantic deviation before implementation.
 4. Add `t`/`tt` support, sampler semantics, TwinFlow trainer, checkpoint/resume, and eval glue in the smallest project-native patch.
-5. Preserve original pretrained behavior; old checkpoints may only miss the new `tt_embedder.*`, which must initialize from `t_embedder.*`.
+5. Preserve original pretrained behavior; any newly introduced TwinFlow parameters or missing checkpoint keys need an audited warm-start policy.
 6. Run the smoke gates in `ACCEPTANCE_CHECKLIST.md` before any formal training.
 7. Distilled inference/eval must use `cfg=0` unless a written review proves otherwise.
-8. Every eval contact sheet must include `cond`, denormalized `GT`, old/pretrained baseline, and distilled few/any columns under the same render path.
+8. Every protocol eval must follow `eval_artifact_spec` and include condition input, ground-truth/target when available, old/pretrained baseline, and distilled variants under the same decode/render/export path.
 9. Stop and ask the user if a required path, checkpoint, data split, or output location is missing or inconsistent.
 {slurm_block}
 ## Deliverables
@@ -540,7 +546,7 @@ python -m twinflow_porting_harness validate INPUT_CONTRACT.json
 - Updated code and config diffs.
 - Handoff with absolute paths.
 - Smoke logs and failure fixes.
-- Eval artifacts: NPZ, PLY, GLB, front-view PNG, contact sheet, and manifest.
+- Eval artifacts required by `eval_artifact_spec`, plus a manifest.
 - Clean-context code review before formal run and before claiming results.
 """
 
@@ -563,16 +569,16 @@ Run: `{values.get("run_name", "")}`
 - [ ] Official TwinFlow `t/tt` semantics reviewed.
 - [ ] Sampler `few/any/mul` semantics mapped to the project.
 - [ ] Dataset/collate sorting and branch assignment risk reviewed.
-- [ ] Dense vs sparse latent operations reviewed.
+- [ ] Project tensor/container operations reviewed.
 - [ ] Condition/uncondition construction matches pretrained behavior.
 - [ ] Checkpoint, EMA, resume, and logging paths reviewed.
 - [ ] Eval/decode/render/export chain reviewed to the lowest practical layer.
 
 ## Implementation Gate
 
-- [ ] Model forward supports both `t` and `tt`.
-- [ ] `tt_embedder` warm-starts from `t_embedder`.
-- [ ] Old checkpoint loading allows only audited new keys.
+- [ ] Model forward supports TwinFlow's two-time interface for this project.
+- [ ] Newly introduced TwinFlow parameters have an audited initialization/warm-start policy.
+- [ ] Old checkpoint loading allows only audited new or missing keys.
 - [ ] Branch masks are built on the full local batch before microbatching.
 - [ ] Dist-match/e2e losses only affect intended branches.
 - [ ] Student, optimizer, EMA/teacher, and TwinFlow state save/resume correctly.
@@ -585,11 +591,12 @@ Run: `{values.get("run_name", "")}`
 - [ ] Python `py_compile`.
 - [ ] Synthetic 1-step.
 - [ ] Real-data fetch preflight on `dataset_root`.
+- [ ] Project tensor/container semantics reviewed, including dense, sparse, latent, image, text, or multimodal containers as applicable.
 - [ ] Single-GPU real-data 1-step.
 - [ ] Multi-GPU/DDP/FSDP 1-step when applicable.
 - [ ] Save/resume 1-step.
 - [ ] Eval/decode smoke.
-- [ ] NPZ/PLY/GLB/front-view PNG/contact/manifest generated.
+- [ ] Artifacts required by `eval_artifact_spec` and manifest generated.
 
 ## Formal Run Gate
 
@@ -603,8 +610,9 @@ Run: `{values.get("run_name", "")}`
 ## Protocol Eval Gate
 
 - [ ] Fixed `eval_sample_spec`, seed, and noise.
-- [ ] Contact columns include `cond`, denormalized `GT`, old/pretrained baseline, and distilled few/any/mul variants.
-- [ ] GT uses the same denormalization and render path as model outputs.
+- [ ] Eval artifacts match `eval_artifact_spec`.
+- [ ] Comparison layout includes condition input, ground-truth/target when available, old/pretrained baseline, and distilled variants.
+- [ ] GT/target uses the same decode/render/export path as model outputs.
 - [ ] Silent data substitution is disabled or sample hashes are recorded.
 - [ ] Every reported issue points to a concrete image/crop.
 - [ ] Result claims are reviewed by a clean-context reviewer.

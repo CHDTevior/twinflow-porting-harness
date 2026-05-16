@@ -22,8 +22,8 @@
 | --- | --- | --- |
 | 用户需要显式指定数据 CSV、输出目录、conda env、Slurm 方式 | 这些不能靠 agent 猜 | 新增 `python -m twinflow_porting_harness init/validate/required` 输入合同门禁 |
 | 训练前用户追问是否做了 clean-context review | TwinFlow 与原项目接口边界最容易 silent drift | 文档和 checklist 强制 call-chain review |
-| old checkpoint 缺 `tt_embedder.*` | `strict=False` 会隐藏随机新权重 | checklist 要求只允许 audited new keys，并从 `t_embedder` 初始化 |
-| GT 初始 decode 风险 | normalized latent 不能直接当 VAE latent | eval 文档要求 denormalized GT |
+| old checkpoint 缺新增 TwinFlow 参数 | `strict=False` 会隐藏随机新权重 | checklist 要求只允许 audited new/missing keys，并写明 warm-start 策略 |
+| GT/target 初始 decode 风险 | 项目内部训练表示不一定等同可导出表示 | eval 文档要求 GT/target 与模型输出走同一 decode/render/export 路径 |
 | full eval 中 sample 3 被数据 retry 替换 | dataset fallback 会造成“看似完整”的假样本对齐 | strict eval 要求禁用 silent substitution 或记录 sample hash |
 | 非空输出目录可能混入旧文件 | artifact 不能只靠文件名肉眼判断 | eval 默认新目录，manifest 记录 paths/hash |
 | old `few/any` 不是官方 baseline | 通过 TwinFlow wrapper 的旧权重 probe 容易被误称 baseline | 文档要求列名和报告区分 old standard vs old probe |
@@ -37,9 +37,9 @@
 - 数据路径、输出路径、checkpoint、conda env、eval sample、Slurm log 不能缺省。
 - agent 缺参数时必须问用户，不能开始改代码。
 - eval 输出目录默认 fresh。
-- manifest 记录 sample id/hash、seed、mode、checkpoint、NPZ/PLY/GLB/PNG。
+- manifest 记录 sample id/hash、seed、mode、checkpoint、`eval_artifact_spec` 指定产物路径。
 - strict eval 禁止 silent sample substitution。
-- GT decode 必须明确 denormalization。
+- GT/target decode/export 必须明确且和模型输出同路径。
 - 阶段成果必须 clean-context review。
 
 ## 不做的事

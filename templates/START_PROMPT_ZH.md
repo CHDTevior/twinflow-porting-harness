@@ -5,7 +5,7 @@
 
 开始前先验证输入合同：
 - 必须有 INPUT_CONTRACT.json。
-- project_root、dataset_root、train_metadata、eval_metadata、output_root、base_checkpoint、conda_env、official_twinflow_ref、condition_type、cluster、gpu_count、eval_sample_spec 都必须明确。
+- project_root、dataset_root、train_metadata、eval_metadata、output_root、base_checkpoint、conda_env、official_twinflow_ref、condition_type、cluster、gpu_count、eval_sample_spec、eval_artifact_spec 都必须明确。
 - cluster=slurm 时，slurm_log_dir 以及 slurm_partition 或 sbatch_template 必须明确。
 - 缺任一项时继续问我，不要开始改代码、训练或评估。
 
@@ -13,7 +13,7 @@
 - model forward 是否支持 t/tt
 - sampler 的 few/any/mul 语义
 - dataset/collate 是否排序
-- dense/sparse tensor 差异
+- 项目 tensor/container 差异
 - microbatch/DDP/FSDP
 - EMA/checkpoint/resume
 - condition/uncondition 构造
@@ -47,13 +47,13 @@
 - Slurm 队列和 log 路径
 - checkpoint 数量和 retention
 
-训练后标准评估必须输出：
-cond + denormalized GT latent + 原模型标准 NFE + distilled few/any/mul 协议列。
+训练后标准评估必须按 eval_artifact_spec 输出：
+条件输入或等价 conditioning 证据 + GT/target if available + 原模型标准 NFE + distilled few/any/mul 协议列。
 
 每个样本必须导出：
-NPZ、PLY、GLB、front-view PNG、contact sheet、manifest。
+eval_artifact_spec 指定的项目原生产物和 manifest。
 
-manifest 必须记录 sample id/hash、seed、mode、NFE、checkpoint、cond、NPZ/PLY/GLB/PNG 路径。
+manifest 必须记录 sample id/hash、seed、mode、NFE、checkpoint、condition input、artifact 路径。
 strict eval 不允许 silent sample substitution；如果底层数据集会 fallback 换样本，必须禁用或在报告中标记不严格。
 
 推理 cfg 默认 0。

@@ -42,6 +42,7 @@ python -m twinflow_porting_harness validate <INPUT_CONTRACT.json>
 - `cluster`
 - `gpu_count`
 - `eval_sample_spec`
+- `eval_artifact_spec`
 - `slurm_log_dir` and `slurm_partition`/`sbatch_template` when `cluster=slurm`
 
 未满足时启动流程停在提问阶段。不要猜测路径，不要用当前目录下看起来像的 CSV，不要复用旧 output。
@@ -67,15 +68,16 @@ cluster = Slurm/DDP/FSDP/local
 conda_env =
 slurm_log_dir =
 eval_sample_spec =
+eval_artifact_spec =
 ```
 
 ## 2. 迁移前代码审查
 
 必须审查：
 
-- 模型 forward 是否能加入 `tt`。
-- 新 `tt_embedder` 是否能从原 `t_embedder` 初始化。
-- checkpoint warm-start 是否允许只缺 `tt_embedder.*`。
+- 模型 forward 是否能加入 TwinFlow two-time interface。
+- 新增 TwinFlow 参数是否有从旧模型可解释 warm-start 的策略。
+- checkpoint warm-start 是否只允许审查过的新 key/missing key。
 - 原 scheduler、`sigma_min`、`t_rescale` 是否和 TwinFlow 兼容。
 - dataset/collate 是否会按长度、稀疏体素数、图像尺寸排序。
 - branch mask 是否会和排序后的样本统计相关。
@@ -177,8 +179,8 @@ batch_split: 2 -> 4
 7. 单卡真实 1-step。
 8. 多卡 DDP 1-step。
 9. save/resume 1-step，强制 `i_log=1`。
-10. eval smoke，输出 `cond + GT + original + few`。
-11. decode smoke，输出 PLY/GLB/front-view PNG/contact/manifest。
+10. eval smoke，输出 `condition + GT/target if available + original + distilled probe`。
+11. decode/export smoke，输出 `eval_artifact_spec` 指定产物和 manifest。
 
 失败就停，不要启动长训。
 
@@ -215,7 +217,7 @@ srun --jobid=<jobid> --overlap --ntasks=1 nvidia-smi
 
 ```text
 cond
-GT latent
+GT/target if available
 original/pretrained model, standard NFE
 distilled few 1 NFE
 distilled few 4 NFE
@@ -232,17 +234,14 @@ cond | GT | old_mul25 | old_few1 | old_any2 | old_any4 | distilled_few1 | distil
 
 不要把 `old_few1/any2/any4` 自动写成“官方 old baseline”；它们通常只是旧权重在新 sampler 接口下的 probe。
 
-每个样本保存：
+每个样本保存 `eval_artifact_spec` 指定的项目原生产物，例如：
 
 ```text
-sample_cond_image_*.png
-sample_gt_latent_*.npz
-sample_undistilled_*.npz
-sample_distilled_few_*.npz
-*.ply
-*.glb
-*.png front-view render
-comparison_all.png
+condition_artifact_*
+target_artifact_*
+baseline_artifact_*
+distilled_artifact_*
+comparison_artifact_*
 manifest.json
 ```
 
@@ -253,8 +252,8 @@ manifest 必须包含：
 - sampler mode and NFE。
 - checkpoint path。
 - cond path。
-- NPZ/PLY/GLB/PNG path。
-- decode/render status。
+- artifact paths from `eval_artifact_spec`。
+- decode/render/export status。
 - recommended: sample SHA256 or another deterministic identity hash。
 
 strict eval 必须禁止 silent retry 换样本，或显式记录被替换的样本并标记该结果不能作为严格证据。
@@ -282,10 +281,10 @@ strict eval 必须禁止 silent retry 换样本，或显式记录被替换的样
 
 可视化验收：
 
-- 第一列是 `cond`。
-- front-view。
-- 无黑色三角描边伪影。
-- GLB 可在 3D 软件打开。
+- 对比产物包含 condition input 或等价 conditioning 证据。
+- 视角/展示方式符合 `eval_artifact_spec`。
+- render/export 没有明显的项目管线伪影。
+- 项目原生可查看/可加载产物能被对应工具打开。
 - manifest 包含所有样本和模式路径。
 
 科研验收：
@@ -298,9 +297,9 @@ strict eval 必须禁止 silent retry 换样本，或显式记录被替换的样
 
 ## 9. 过去错误示例
 
-1. 错把 normalized training latent 当 VAE latent 解码，导致 GT 错。
-2. CPU/PIL fallback 给三角面画黑边，导致 GT 满是黑点。
-3. 用斜侧面视角验收，导致用户看到“躺着的侧面”。
+1. 错把内部训练表示直接当可导出表示，导致 GT/target 错。
+2. fallback export/render 路径引入伪影，导致误判模型质量。
+3. 用不符合协议的视角/展示方式验收，导致质量判断偏移。
 4. 蒸馏后推理误开 CFG，重复条件引导。
 5. batch 内排序和固定 branch mask 相关，导致 branch 数据分布偏。
 6. microbatch 先切再分 branch，导致和官方 batch 语义不等价。
@@ -309,21 +308,21 @@ strict eval 必须禁止 silent retry 换样本，或显式记录被替换的样
 9. 前 2k 不 OOM 不代表后续不会 OOM，稀疏形状和分支会造成峰值变化。
 10. contact sheet 没有 `cond`，无法判断条件一致性。
 11. 评估时数据读取失败被 retry 随机换样本，导致 full eval 看似有 6 个样本但实际有重复。
-12. GT 保存前没有反归一化，导致 decode 出来的 GT 不是模型要对齐的真实 latent。
-13. 旧 checkpoint 缺 `tt_embedder.*` 时直接 `strict=False`，会把新增权重随机初始化且不报错。
+12. GT/target 保存前没有走正确反变换或导出路径，导致它不是模型要对齐的真实目标。
+13. 旧 checkpoint 缺新增 TwinFlow 参数时直接 `strict=False`，会把新增权重随机初始化且不报错。
 14. 复用非空 eval 输出目录，旧文件混入新 manifest。
-15. 只看一张 contact sheet 就做质量结论，没有检查 NPZ/PLY/GLB/manifest 是否都对应同一 sample。
+15. 只看一张对比图就做质量结论，没有检查项目原生产物和 manifest 是否都对应同一 sample。
 
 ## 10. 新项目启动 Prompt 模板
 
 ```text
 请在 <project_root> 上迁移 https://github.com/inclusionAI/TwinFlow。
-开始前先运行 twinflow_porting_harness 输入合同门禁；缺 dataset/output/checkpoint/conda/slurm/eval sample 任一项就继续向用户提问，不要开始改代码。
+开始前先运行 twinflow_porting_harness 输入合同门禁；缺 dataset/output/checkpoint/conda/slurm/eval sample/eval artifact spec 任一项就继续向用户提问，不要开始改代码。
 先审查原项目与官方 TwinFlow 的模型 forward、t/tt、sampler、dataset/collate、microbatch、DDP/EMA、checkpoint、eval/render 全调用链。
 实现后必须跑 synthetic smoke、real-data smoke、多卡 smoke、resume smoke。
 训练前给出 config diff 和验收标准。
 训练中监控 loss/branch/GPU/OOM/NaN。
-训练后标准评估必须输出 cond + denormalized GT + 原模型 + 蒸馏 few/any/mul 协议列，并导出 NPZ/PLY/GLB/front-view PNG/contact/manifest。
+训练后标准评估必须按 eval_artifact_spec 输出 condition + GT/target if available + 原模型 + 蒸馏 few/any/mul 协议列，并导出项目原生产物和 manifest。
 推理 cfg 默认 0。
 每个质量问题必须配对应图片。
 把失败经验、关键决策、sample hash、review 结论和绝对路径写入 handoff。
